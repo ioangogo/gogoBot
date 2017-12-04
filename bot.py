@@ -16,19 +16,23 @@ config = configparser.ConfigParser()
 
 cmds = []
 
+
+
 if os.path.exists("config.ini"):
     config.read("config.ini")
     try:
         token = config['Config']['token']
     except configparser.NoSectionError:
         sys.exit("Error, Missing token, please make a bot for this")
-    socialmsg = {}
+    socialmsg={}
     if 'Messages' in config:
         messages = config['Messages']
         for site in messages:
              socialmsg[site] = messages[site]
     if 'speqname' in config['Config']:
         speqname = config['Config']['speqname']
+    if 'youtubekey' in config['Config']:
+        ytkey = config['Config']['youtubekey']
 
 else:
     sys.exit("Error, No Config")
@@ -70,7 +74,16 @@ async def next(message):
     msg = "The next stream is {0}!!! in {1}(or {2})".format(streamtype, intime, str(nexttime))
 
 
-    return msg 
+    return msg
+
+async def youtube(message):
+    query = message.content.replace("!yt ", "")
+    url = "https://www.googleapis.com/youtube/v3/search?q={1}&part=snippet&maxResults=1&key={0}".format(ytkey,query)
+    resp = requests.get(url=url)
+    data = json.loads(resp.text)
+    id = data["items"][0]["id"]["videoId"]
+    return "https://youtu.be/"+id
+
 
 @client.event
 async def on_message(message):
@@ -78,6 +91,8 @@ async def on_message(message):
         msg = await social(message)
     elif message.content.startswith('!next'):
         msg = await next(message)
+    elif message.content.startswith('!yt'):
+        msg = await youtube(message)
     tmp = await client.send_message(message.channel, msg)
 
 
