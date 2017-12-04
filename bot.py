@@ -1,41 +1,21 @@
-import discord
-import asyncio
-import configparser
-import sys
-import os
+import json
 import logging
-
+import os
+import requests
+import sys
 from datetime import datetime
+
+import configparser
 import dateutil.parser
-import json, requests
+import discord
 import pytz
 
 logging.basicConfig(level=logging.INFO)
 
 config = configparser.ConfigParser()
 
-cmds = []
-
-
-
-if os.path.exists("config.ini"):
-    config.read("config.ini")
-    try:
-        token = config['Config']['token']
-    except configparser.NoSectionError:
-        sys.exit("Error, Missing token, please make a bot for this")
-    socialmsg={}
-    if 'Messages' in config:
-        messages = config['Messages']
-        for site in messages:
-             socialmsg[site] = messages[site]
-    if 'speqname' in config['Config']:
-        speqname = config['Config']['speqname']
-    if 'youtubekey' in config['Config']:
-        ytkey = config['Config']['youtubekey']
-
-else:
-    sys.exit("Error, No Config")
+cmdhelp = {}
+cmds={}
 
 client = discord.Client()
 
@@ -49,11 +29,19 @@ async def social(message):
     command = message.content.split(" ")
     msg = ""
     if len(command) > 1:
-    	msg = socialmsg[command[1]]
+        if(command[1] == "list"):
+            keynum = len(socialmsg)
+            for key, value in socialmsg.items():
+                comma = ""
+                if keynum != 0:
+                    comma = ", "
+                msg += "{0}{1}".format(key,comma)
+        else:
+            msg = socialmsg[command[1]]
     else:
         msg = "You can find " + message.server.name + " on\r\n"
         for s, txt in socialmsg.items():
-           msg += "{0}: {1}, ".format(s, txt)
+            msg += "{0}: {1}, ".format(s, txt)
         msg += "and more"
     return msg
 
@@ -87,14 +75,31 @@ async def youtube(message):
 
 @client.event
 async def on_message(message):
-    if message.content.startswith('!social'):
-        msg = await social(message)
-    elif message.content.startswith('!next'):
-        msg = await next(message)
-    elif message.content.startswith('!yt'):
-        msg = await youtube(message)
+    command = message.content.split(" ")
+    msg = await command[0](message)
     tmp = await client.send_message(message.channel, msg)
 
+if os.path.exists("config.ini"):
+    config.read("config.ini")
+    try:
+        token = config['Config']['token']
+    except configparser.NoSectionError:
+        sys.exit("Error, Missing token, please make a bot for this")
+    socialmsg={}
+    if 'Messages' in config:
+        cmdhelp["social"] = "This command prints out the urls for the social feeds\r\nsyntax: !social [name|list] "
+        cmds["!social"]=social
+        messages = config['Messages']
+        for site in messages:
+             socialmsg[site] = messages[site]
+    if 'speqname' in config['Config']:
+        cmds["!next"]=next
+        speqname = config['Config']['speqname']
+    if 'youtubekey' in config['Config']:
+        cmds["!yt"]=youtube
+        ytkey = config['Config']['youtubekey']
 
+else:
+    sys.exit("Error, No Config")
 
 client.run(token)
