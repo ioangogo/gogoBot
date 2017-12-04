@@ -15,7 +15,7 @@ logging.basicConfig(level=logging.INFO)
 config = configparser.ConfigParser()
 
 cmdhelp = {}
-cmds={}
+cmds= {}
 
 client = discord.Client()
 
@@ -75,10 +75,13 @@ async def youtube(message):
 
 @client.event
 async def on_message(message):
-    command = message.content.split(" ")
-    msg = await command[0](message)
-    tmp = await client.send_message(message.channel, msg)
-
+    if message.content.startswith("!"):
+        command = message.content.split(" ")
+        try:
+            msg = await cmds[command[0]](message)
+            tmp = await client.send_message(message.channel, msg)
+        except KeyError:
+            await client.send_message(message.author, "The command you entered is invalid or has not been setup")
 if os.path.exists("config.ini"):
     config.read("config.ini")
     try:
