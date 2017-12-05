@@ -21,9 +21,7 @@ client = discord.Client()
 
 @client.event
 async def on_ready():
-    print('Logged in as')
-    print(client.user.name)
-    print(client.user.id)
+    print('Logged in as '+client.user.name)
 
 async def social(message):
     command = message.content.split(" ")
@@ -50,7 +48,6 @@ async def next(message):
 
     time=now.strftime("%Y-%m-%dT%H:%M:%S.0Z")
     url = "https://www.speq.me/api/streamschedule/?format=json&limit=1&start={0}&user={1}".format(time, speqname)
-    print(url)
     resp = requests.get(url=url)
     data = json.loads(resp.text)
     nexttime= dateutil.parser.parse(data["results"][0]['starttime'])
