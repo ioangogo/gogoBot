@@ -73,6 +73,7 @@ async def help(message):
     msg = "Hello, this is gogoBot under the name {0}\r\n".format(client.user.name)
     for key, value in cmdhelp.items():
         msg+="**{0}**: {1}\r\n".format(key, value)
+    msg += "The source, raw source: https://github.com/ioangogo/gogoBot/"
     await client.send_message(message.author, msg)
     return ""
 
