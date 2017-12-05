@@ -1,0 +1,13 @@
+[Unit]
+Description=gogoBot as discord bot
+After=network.target
+
+[Service]
+Type=simple
+User=nanodano
+WorkingDirectory=/home/ioan/gogobot #replace with your Working directory
+ExecStart=python3 bot.py
+Restart=on-abort
+
+[Install]
+WantedBy=multi-user.target
