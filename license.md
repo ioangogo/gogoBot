@@ -1,6 +1,6 @@
 The MIT License (MIT)
 
-Copyright (c) 2015-2016 Rapptz
+Copyright (c) 2015-2017 Ioan Loosely
 
 Permission is hereby granted, free of charge, to any person obtaining a
 
