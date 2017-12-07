@@ -22,11 +22,11 @@ headers = {
 config = configparser.ConfigParser()
 
 def ordenal(number):
-    if number % 10 == 1:
+    if number % 10 == 1 and value % 100//10 != 1:
         return "ˢᵗ"
-    elif number % 10 == 2:
+    elif number % 10 == 2 and value % 100//10 != 1:
         return "ⁿᵈ"
-    elif number % 10 == 3:
+    elif number % 10 == 3 and value % 100//10 != 1:
         return "ʳᵈ"
     else:
         return "ᵗʰ"
