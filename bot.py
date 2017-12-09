@@ -22,11 +22,11 @@ headers = {
 config = configparser.ConfigParser()
 
 def ordenal(number):
-    if number % 10 == 1 and value % 100//10 != 1:
+    if number % 10 == 1 and number % 100//10 != 1:
         return "ˢᵗ"
-    elif number % 10 == 2 and value % 100//10 != 1:
+    elif number % 10 == 2 and number % 100//10 != 1:
         return "ⁿᵈ"
-    elif number % 10 == 3 and value % 100//10 != 1:
+    elif number % 10 == 3 and number % 100//10 != 1:
         return "ʳᵈ"
     else:
         return "ᵗʰ"
@@ -44,6 +44,21 @@ async def on_ready():
     print('Logged in as '+client.user.name)
     await client.change_presence(game=discord.Game(name='type !help for commands'))
 
+def checktwitch(msg):
+    twitchhead=headers
+    twitchhead['Client-ID'] = "jxhlk3btt2jdev100dv9vhvs0qtm2c"
+    url = "https://api.twitch.tv/helix/streams?user_login=loadingartist&type=live"
+    resp = requests.get(url=url, headers=twitchhead)
+    data = json.loads(resp.text)
+    if not data['data']:
+        return msg
+    else:
+        game = data['data'][0]['game_id']
+        url = "https://api.twitch.tv/helix/games?id={0}".format(game)
+        resp = requests.get(url=url, headers=twitchhead)
+        data = json.loads(resp.text)
+        return "Loading Artist IS LIVE, Playing {0}".format(data['data'][0]['name'])
+
 async def social(message):
     command = message.content.lower()
     command = command.split(" ")
@@ -52,6 +67,7 @@ async def social(message):
     return msg
 
 async def next(message):
+
     now = datetime.now(pytz.utc)
 
     time=now.strftime("%Y-%m-%dT%H:%M:%S.0Z")
@@ -71,9 +87,9 @@ async def next(message):
             intime += "{0}m ".format(td.seconds % 3600 // 60)
         msg = "The next stream is {0}!!! in {1}({2})".format(streamtype, intime, str(nexttime.strftime('aka %H:%M on the %-d{0} of %b UTC'.format(ordenal(nexttime.day)))))
     else:
-        msg=""
+        msg="<@98372271772553216> IS LATE"
         la=discord.utils.get(message.server.members, discriminator = 6142)
-        msg="@Loading Artist#6142 Should be streaming {0}".format(streamtype)
+    msg = checktwitch(msg)
     return msg
 
 async def youtube(message):
@@ -91,6 +107,12 @@ async def help(message):
     msg += "\r\nThe source, raw source: https://github.com/ioangogo/gogoBot/"
     await client.send_message(message.author, msg)
     return ""
+
+async def hug(msg):
+    if not msg.mentions:
+        return "_Hugs {}_".format(msg.author.mention)
+    else:
+        return "_Gives a hug to {} from {}_".format(msg.mentions[0].mention,msg.author.mention)
 
 @client.event
 async def on_message(message):
@@ -111,7 +133,10 @@ async def on_server_join(server):
 
 # load config, im doing this here so that i can use it to use lists to set the commands
 if os.path.exists("config.ini"):
+    cmds["!hug"] = hug
     cmds["!help"] = help
+    cmdhelp["!hug"] = "We have ironed out the bug in the orginal bot and this bot now gives warm hugs. Mention a user **after** the command to send a hug to them"
+
     config.read("config.ini")
     try:
         token = config['Config']['token']
