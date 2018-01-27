@@ -1,19 +1,27 @@
 #! /usr/bin/python3
+
+ill = 0
+
 import json
 import logging
 import os
 import requests
 import sys
+import tomd
 from datetime import datetime
 
 import configparser
 import dateutil.parser
 import discord
+
 import pytz
+from pytz import common_timezones
+
+retrys = 0 # enter number of allowed reconnects(0 = no limit)
 
 print(os.getcwd())
 
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.INFO, filename="gogobot.log")
 
 
 headers = {
@@ -48,8 +56,10 @@ def checktwitch(msg):
     twitchhead=headers
     twitchhead['Client-ID'] = "jxhlk3btt2jdev100dv9vhvs0qtm2c"
     url = "https://api.twitch.tv/helix/streams?user_login=loadingartist&type=live"
-    resp = requests.get(url=url, headers=twitchhead)
+    resp = requests.get(url=url, headers=twitchhead, timeout=5)
+
     data = json.loads(resp.text)
+
     if not data['data']:
         return msg
     else:
@@ -59,40 +69,83 @@ def checktwitch(msg):
         data = json.loads(resp.text)
         return "Loading Artist IS LIVE, Playing {0}".format(data['data'][0]['name'])
 
+async def gettime(msg):
+    await client.send_typing(msg.channel)
+    fmt = '%H:%M %Y-%m-%d'
+    if msg.content.startswith("!gregtime"):
+        tz = pytz.timezone("Pacific/Auckland")
+    elif msg.content.startswith("!time"):
+        tz = pytz.timezone("Etc/UTC")
+        try:
+            cmd = msg.content.split(" ")
+            tz = pytz.timezone(cmd[1])
+        except exception as e:
+            logger.warn(e)
+    now = datetime.now(tz)
+    timefmt = now.strftime(fmt)
+    return "The time in {} is {}".format(tz.zone, timefmt)
+
+async def wiki(message):
+    await client.send_typing(message.channel)
+
+    search=message.content.split(" ",1)
+    link="https://en.wikipedia.org/w/api.php"
+    payload = {'action': 'query', 'list': 'search', 'format': 'json', 'srsearch': search[1]}
+    page = requests.get(link, headers=headers, timeout=5, params=payload)
+    page.encoding = 'UTF-8'
+    response = json.loads(page.text)
+    result = response['query']['search'][0]
+    
+    url = "https://en.wikipedia.org/wiki/" + result['title'].replace(" ", "_")
+
+    msg = "{}: {}... {}".format(result['title'], tomd.Tomd(result['snippet'].split(".")[0]).markdown, url)
+    return msg
+
 async def social(message):
+    await client.send_typing(message.channel)
     command = message.content.lower()
     command = command.split(" ")
     msg = ""
     msg = socialmsg[command[0].replace("!","")]
     return msg
 
+speq=0
+
 async def next(message):
+    await client.send_typing(message.channel)
 
     now = datetime.now(pytz.utc)
 
     time=now.strftime("%Y-%m-%dT%H:%M:%S.0Z")
     url = "https://www.speq.me/api/streamschedule/?format=json&limit=1&start={0}&user={1}".format(time, speqname)
-    resp = requests.get(url=url, headers=headers)
-    data = json.loads(resp.text)
-    streamtype = data["results"][0]['title']
-    nexttime= dateutil.parser.parse(data["results"][0]['starttime'])
-    if nexttime > now:
-        td = nexttime - now
-        intime = ""
-        if td.days != 0:
-            intime += "{0}d ".format(td.days)
-        if td.seconds // 3600 != 0:
-            intime += "{0}h ".format(td.seconds // 3600)
-        if td.seconds % 3600 // 60 != 0:
-            intime += "{0}m ".format(td.seconds % 3600 // 60)
-        msg = "The next stream is {0}!!! in {1}({2})".format(streamtype, intime, str(nexttime.strftime('aka %H:%M on the %-d{0} of %b UTC'.format(ordenal(nexttime.day)))))
+    if speq == 1:
+        resp = requests.get(url=url, headers=headers, timeout=3)
+        data = json.loads(resp.text)
+        streamtype = data["results"][0]['title']
+        nexttime= dateutil.parser.parse(data["results"][0]['starttime'])
+        if nexttime > now:
+            td = nexttime - now
+            intime = ""
+            if td.days != 0:
+                intime += "{0}d ".format(td.days)
+            if td.seconds // 3600 != 0:
+                intime += "{0}h ".format(td.seconds // 3600)
+            if td.seconds % 3600 // 60 != 0:
+                intime += "{0}m ".format(td.seconds % 3600 // 60)
+            msg = "The next stream is {0}!!! in {1}({2})".format(streamtype, intime, str(nexttime.strftime('aka %H:%M on the %-d{0} of %b UTC'.format(ordenal(nexttime.day)))))
+        else:
+            msg="<@98372271772553216> IS LATE"
+            la=discord.utils.get(message.server.members, discriminator = 6142)
     else:
-        msg="<@98372271772553216> IS LATE"
-        la=discord.utils.get(message.server.members, discriminator = 6142)
-    msg = checktwitch(msg)
+        msg = "Speq Is Down"
+    if(ill==0):
+            msg = checktwitch(msg)
+    else:
+            msg = "Loading Artist is ill"
     return msg
 
 async def youtube(message):
+    await client.send_typing(message.channel)
     query = message.content.replace("!yt ", "")
     url = "https://www.googleapis.com/youtube/v3/search?q={1}&part=snippet&maxResults=1&key={0}&type=video".format(ytkey,query)
     resp = requests.get(url=url)
@@ -108,11 +161,30 @@ async def help(message):
     await client.send_message(message.author, msg)
     return ""
 
+async def give(msg):
+    emoji = ""
+    if msg.content.startswith("!coffee"):
+        emoji = "☕"
+    elif msg.content.startswith("!cake"):
+        emoji = "🎂"
+
+    if not msg.mentions:
+        await client.add_reaction(msg, emoji)
+    else:
+        await client.send_typing(msg.channel)
+        return "_Gives {} to {} from {}_".format(emoji, msg.mentions[0].mention,msg.author.mention)
+
 async def hug(msg):
+    await client.send_typing(msg.channel)
     if not msg.mentions:
         return "_Hugs {}_".format(msg.author.mention)
     else:
         return "_Gives a hug to {} from {}_".format(msg.mentions[0].mention,msg.author.mention)
+
+#@client.event
+#async def discord.on_member_join(member):
+#    msg = "Morning {}, Welcome to The Loading Artist Discord".format(member.mention)
+#    await client.send_message(message.channel, msg)
 
 @client.event
 async def on_message(message):
@@ -121,8 +193,6 @@ async def on_message(message):
     if not message.author.bot and message.content.startswith("!"):
         command = command.split(" ")
         if command[0] in cmds:
-            if not message.content.startswith("!help"):
-                await client.send_typing(message.channel)
             msg = await cmds[command[0]](message)
             if msg != "":
                 tmp = await client.send_message(message.channel, msg)
@@ -134,8 +204,16 @@ async def on_server_join(server):
 # load config, im doing this here so that i can use it to use lists to set the commands
 if os.path.exists("config.ini"):
     cmds["!hug"] = hug
+    cmds["!cake"] = give
+    cmds["!coffee"] = give
     cmds["!help"] = help
+    cmds["!wiki"] = wiki
+    cmds["!gregtime"] = gettime
+    cmds["!time"] = gettime
+    cmdhelp["!wiki"] = "Searches wikipedia. Syntax: ```!wiki [query]```"
     cmdhelp["!hug"] = "We have ironed out the bug in the orginal bot and this bot now gives warm hugs. Mention a user **after** the command to send a hug to them"
+    cmdhelp["!gregtime"] = "Returns the time for LoadingArtist"
+    cmdhelp["!time"] = "Gets the time in the timezone, Syntax ```!time [TZ formatted timezone]```consult this list for timezones and their TZ format https://en.wikipedia.org/wiki/List_of_tz_database_time_zones"
 
     config.read("config.ini")
     try:
@@ -161,6 +239,15 @@ if os.path.exists("config.ini"):
 else:
     sys.exit("Error, No Config")
 
-client.run(token)
+trys=0
+
+while(trys<=retrys):
+    try:
+        client.run(token)
+    except:
+        logger.error("Connection faliure, attempting reconnect in 10 seconds")
+        time.sleep(5)
+        if retrys != 0:
+            trys += 1
 
 
