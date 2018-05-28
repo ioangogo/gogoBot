@@ -8,6 +8,7 @@ import os
 import requests
 import sys
 import tomd
+import emoji
 from datetime import datetime
 
 import configparser
@@ -21,7 +22,7 @@ retrys = 0 # enter number of allowed reconnects(0 = no limit)
 
 print(os.getcwd())
 
-logging.basicConfig(level=logging.INFO, filename="gogobot.log")
+logging.basicConfig(level=logging.INFO)
 
 
 headers = {
@@ -54,7 +55,7 @@ async def on_ready():
 
 def checktwitch(msg):
     twitchhead=headers
-    twitchhead['Client-ID'] = ""
+    twitchhead['Client-ID'] = "jxhlk3btt2jdev100dv9vhvs0qtm2c"
     url = "https://api.twitch.tv/helix/streams?user_login=loadingartist&type=live"
     resp = requests.get(url=url, headers=twitchhead, timeout=5)
 
@@ -95,11 +96,22 @@ async def wiki(message):
     page.encoding = 'UTF-8'
     response = json.loads(page.text)
     result = response['query']['search'][0]
-    
+
     url = "https://en.wikipedia.org/wiki/" + result['title'].replace(" ", "_")
 
     msg = "{}: {}... {}".format(result['title'], tomd.Tomd(result['snippet'].split(".")[0]).markdown, url)
     return msg
+
+async def blocktext(msg):
+    await client.send_typing(msg.channel)
+    word = msg.content.split(" ")
+    wordarray=word[1].spit()
+    output = ""
+    for letter in wordarray:
+        output += " :regional_indicator_{0}:".format(letter.lower())
+    output = emoji.emojize(output,use_aliases=True)
+    return output
+
 
 async def social(message):
     await client.send_typing(message.channel)
@@ -210,6 +222,7 @@ if os.path.exists("config.ini"):
     cmds["!wiki"] = wiki
     cmds["!gregtime"] = gettime
     cmds["!time"] = gettime
+    cmds["!bubbletext"] = blocktext
     cmdhelp["!wiki"] = "Searches wikipedia. Syntax: ```!wiki [query]```"
     cmdhelp["!hug"] = "We have ironed out the bug in the orginal bot and this bot now gives warm hugs. Mention a user **after** the command to send a hug to them"
     cmdhelp["!gregtime"] = "Returns the time for LoadingArtist"
@@ -241,13 +254,8 @@ else:
 
 trys=0
 
-while(trys<=retrys):
+while(True):
     try:
         client.run(token)
     except:
-        logger.error("Connection faliure, attempting reconnect in 10 seconds")
-        time.sleep(5)
-        if retrys != 0:
-            trys += 1
-
-
+        logger.error("Connection faliure")
