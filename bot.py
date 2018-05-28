@@ -55,7 +55,7 @@ async def on_ready():
 
 def checktwitch(msg):
     twitchhead=headers
-    twitchhead['Client-ID'] = "jxhlk3btt2jdev100dv9vhvs0qtm2c"
+    twitchhead['Client-ID'] = "get your own ID"
     url = "https://api.twitch.tv/helix/streams?user_login=loadingartist&type=live"
     resp = requests.get(url=url, headers=twitchhead, timeout=5)
 
